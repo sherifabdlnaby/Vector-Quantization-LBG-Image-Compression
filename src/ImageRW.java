@@ -31,16 +31,17 @@ public class ImageRW {
         } catch (IOException e) {
             return null;
         }
-
     }
     public static void writeImage(int[][] imagePixels, String outPath) {
-        BufferedImage image = new BufferedImage(imagePixels.length, imagePixels[0].length, BufferedImage.TYPE_INT_RGB);
-        for (int y = 0; y < imagePixels.length; y++) {
-            for (int x = 0; x < imagePixels[y].length; x++) {
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < height; y++) {
+            int s;
+            if(y == 199)
+                s = 13;
+            for (int x = 0; x < width; x++) {
                 int value = -1 << 24;
                 value = 0xff000000 | (imagePixels[y][x] << 16) | (imagePixels[y][x] << 8) | (imagePixels[y][x]);
                 image.setRGB(x, y, value);
-
             }
         }
         File ImageFile = new File(outPath);

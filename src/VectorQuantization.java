@@ -3,6 +3,8 @@ import java.util.*;
 public class VectorQuantization {
 
     public static Vector<Integer> vectorAverage (Vector<Vector<Integer>> Vectors){
+        if(Vectors.size() == 0)
+            return (Vector<Integer>) new Object();
         int[] summation = new int[Vectors.get(0).size()];
         
         for (Vector<Integer> vector : Vectors )
@@ -26,9 +28,10 @@ public class VectorQuantization {
     }
     public static void Quantize(int Level, Vector<Vector<Integer>> Vectors, Vector<Vector<Integer>> Quantized)
     {
-        if(Level == 1)
+        if(Level == 1 || Vectors.size() == 0)
         {
-            Quantized.add(vectorAverage(Vectors));
+            if(Vectors.size() > 0)
+                Quantized.add(vectorAverage(Vectors));
             return;
         }
         //Split
@@ -78,7 +81,7 @@ public class VectorQuantization {
     public static void Compress(){
 
         int vectorHeight = 2;
-        int vectorWidth = 2;
+        int vectorWidth = 7;
 
         //Read Image
         int[][] image = ImageRW.readImage("C:\\Users\\Sherif\\Desktop\\img.jpg");
@@ -116,10 +119,27 @@ public class VectorQuantization {
 
         Vector<Vector<Integer>> Quantized = new Vector<>();
 
-        Quantize(4, Vectors, Quantized);
+        //Fill Quantized Vector
+        Quantize(128, Vectors, Quantized);
 
+        //Optimize
+        Vector<Integer> VectorsToOptimizeIndices = Optimize(Vectors, Quantized);
 
+        ////////////REWRITE
+        int[][] newImg = new int[matrixHeight][matrixWidth];
 
-
+        for (int i = 0; i < VectorsToOptimizeIndices.size(); i++) {
+            int x = i / (matrixWidth / vectorWidth);
+            int y = i % (matrixWidth / vectorWidth);
+            x *= vectorHeight;
+            y *= vectorWidth;
+            int v = 0;
+            for (int j = x; j < x + vectorHeight; j++) {
+                for (int k = y; k < y + vectorWidth; k++) {
+                    newImg[j][k] = Quantized.get(VectorsToOptimizeIndices.get(i)).get(v++);
+                }
+            }
+        }
+        ImageRW.writeImage(newImg, "C:\\Users\\Sherif\\Desktop\\img123.jpg");
     }
 }
