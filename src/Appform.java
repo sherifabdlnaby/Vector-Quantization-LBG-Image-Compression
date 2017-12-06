@@ -17,7 +17,13 @@ public class Appform {
     private JSpinner Vsize;
     private File CompressFile;
     private File DecompressFile;
+
     public Appform() {
+
+        Vheight.setValue(2);
+        Vwidth.setValue(2);
+        Vsize.setValue(64);
+
         Compress.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -76,8 +82,6 @@ public class Appform {
 
 
     public static void main(String[] args) {
-        File compressFile;
-        File decompressFile;
         JFrame jFrame = new JFrame("Vector Quantization");
         jFrame.setContentPane(new Appform().Panel);
         jFrame.setDefaultCloseOperation(jFrame.EXIT_ON_CLOSE);
