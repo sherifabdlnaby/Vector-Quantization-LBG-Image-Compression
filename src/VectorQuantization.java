@@ -1,16 +1,15 @@
+import java.io.*;
 import java.util.*;
 
 public class VectorQuantization {
 
-    public static Vector<Integer> vectorAverage (Vector<Vector<Integer>> Vectors){
-        if(Vectors.size() == 0)
-            return (Vector<Integer>) new Object();
+    public static Vector<Integer> vectorAverage (Vector<Vector<Integer>> Vectors)
+    {
         int[] summation = new int[Vectors.get(0).size()];
         
         for (Vector<Integer> vector : Vectors )
             for (int i = 0; i < vector.size(); i++)
                 summation[i] += vector.get(i);
-
 
         Vector<Integer> returnVector = new Vector<>();
         for (int i = 0; i < summation.length; i++)
@@ -26,6 +25,7 @@ public class VectorQuantization {
             distance += Math.pow(x.get(i) - y.get(i), 2);
         return (int) Math.sqrt(distance);
     }
+
     public static void Quantize(int Level, Vector<Vector<Integer>> Vectors, Vector<Vector<Integer>> Quantized)
     {
         if(Level == 1 || Vectors.size() == 0)
@@ -59,6 +59,7 @@ public class VectorQuantization {
         Quantize(Level / 2, leftVectors, Quantized);
         Quantize(Level / 2, rightVectors, Quantized);
     }
+
     public static Vector<Integer> Optimize(Vector<Vector<Integer>> Vectors, Vector<Vector<Integer>> Quantized)
     {
         Vector<Integer> VectorsToOptimizeIndices = new Vector<>();
@@ -78,36 +79,36 @@ public class VectorQuantization {
         return VectorsToOptimizeIndices;
     }
 
-    public static void Compress(){
+    public static boolean Compress(int VH, int VW, int lvl, String Path) throws IOException{
 
-        int vectorHeight = 2;
-        int vectorWidth = 7;
+        int vectorHeight = VH;
+        int vectorWidth = VW;
 
         //Read Image
-        int[][] image = ImageRW.readImage("C:\\Users\\Sherif\\Desktop\\img.jpg");
+        int[][] image = ImageRW.readImage(Path);
 
-        //Calculate Dimensions == to vectorSizes ratio.
-        int imageHeight = ImageRW.height;
-        int imageWidth = ImageRW.width;
-        int matrixHeight = imageHeight % vectorHeight == 0 ? imageHeight : ((imageHeight / vectorHeight) + 1) * vectorHeight;
-        int matrixWidth  = imageWidth  % vectorWidth  == 0 ? imageWidth  : ((imageWidth  /  vectorWidth) + 1) * vectorWidth;
+        //Calculate new dimensions to vectorSizes ratio.
+        int originalHeight = ImageRW.height;
+        int originalWidth  = ImageRW.width;
+        int scaledHeight = originalHeight % vectorHeight == 0 ? originalHeight : ( (originalHeight / vectorHeight) + 1) * vectorHeight;
+        int scaledWidth  = originalWidth  % vectorWidth  == 0 ? originalWidth  : ( (originalWidth  /  vectorWidth) + 1) * vectorWidth;
 
-        //Scale Image
-        int[][] scaledImage = new int[matrixHeight][matrixWidth];
-        for (int i = 0; i < matrixHeight; i++) {
-            int x = i >= imageHeight ? imageHeight - 1 : i;
-            for (int j = 0; j < matrixWidth; j++) {
-                int y = j >= imageWidth ? imageWidth - 1 : j;
+        //Scale Image (Adding Padding)
+        int[][] scaledImage = new int[scaledHeight][scaledWidth];
+        for (int i = 0; i < scaledHeight; i++) {
+            int x = i >= originalHeight ? originalHeight - 1 : i;
+            for (int j = 0; j < scaledWidth; j++) {
+                int y = j >= originalWidth ? originalWidth - 1 : j;
                 scaledImage[i][j] = image[x][y];
             }
         }
 
-        //Get Array Of Vectors
+        //Create Array Of Vectors
         Vector<Vector<Integer>> Vectors = new Vector<>();
 
-        //Fill Array Of Vectors
-        for (int i = 0; i < matrixHeight; i+= vectorHeight) {
-            for (int j = 0; j < matrixWidth; j+= vectorWidth) {
+        //Divide into Vectors and fill The Array Of Vectors
+        for (int i = 0; i < scaledHeight; i+= vectorHeight) {
+            for (int j = 0; j < scaledWidth; j+= vectorWidth) {
                 Vectors.add(new Vector<>());
                 for (int x = i; x < i + vectorHeight; x++) {
                     for (int y = j; y < j + vectorWidth; y++) {
@@ -117,20 +118,55 @@ public class VectorQuantization {
             }
         }
 
+        //Create Array to hold Quantized Vectors
         Vector<Vector<Integer>> Quantized = new Vector<>();
 
-        //Fill Quantized Vector
-        Quantize(128, Vectors, Quantized);
+        //Fill Quantized Vector (The recursive part)
+        Quantize(lvl, Vectors, Quantized);
 
         //Optimize
         Vector<Integer> VectorsToOptimizeIndices = Optimize(Vectors, Quantized);
 
+        //Write using Java's Object Serialization
+        FileOutputStream fileOutputStream = new FileOutputStream(Path+"x");
+        ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
+
+        //Write
+        objectOutputStream.writeObject(ImageRW.width);
+        objectOutputStream.writeObject(ImageRW.height);
+        objectOutputStream.writeObject(scaledWidth);
+        objectOutputStream.writeObject(scaledHeight);
+        objectOutputStream.writeObject(vectorWidth);
+        objectOutputStream.writeObject(vectorHeight);
+        objectOutputStream.writeObject(VectorsToOptimizeIndices);
+        objectOutputStream.writeObject(Quantized);
+        objectOutputStream.close();
+        return true;
+    }
+
+    public static boolean Decompress(String Path) throws IOException, ClassNotFoundException {
+
+        InputStream file = new FileInputStream(Path);
+        InputStream buffer = new BufferedInputStream(file);
+        ObjectInput input = new ObjectInputStream(buffer);
+
+        //Read Saved Tags
+        int width = (int) input.readObject();
+        int height = (int) input.readObject();
+        int scaledWidth = (int) input.readObject();
+        int scaledHeight = (int) input.readObject();
+        int vectorWidth = (int) input.readObject();
+        int vectorHeight = (int) input.readObject();
+        Vector<Integer> VectorsToOptimizeIndices = (Vector<Integer>)input.readObject();
+        Vector<Vector<Integer>> Quantized = (Vector<Vector<Integer>>) input.readObject();
+
+
         ////////////REWRITE
-        int[][] newImg = new int[matrixHeight][matrixWidth];
+        int[][] newImg = new int[scaledHeight][scaledWidth];
 
         for (int i = 0; i < VectorsToOptimizeIndices.size(); i++) {
-            int x = i / (matrixWidth / vectorWidth);
-            int y = i % (matrixWidth / vectorWidth);
+            int x = i / (scaledWidth / vectorWidth);
+            int y = i % (scaledWidth / vectorWidth);
             x *= vectorHeight;
             y *= vectorWidth;
             int v = 0;
@@ -140,6 +176,7 @@ public class VectorQuantization {
                 }
             }
         }
-        ImageRW.writeImage(newImg, "C:\\Users\\Sherif\\Desktop\\img123.jpg");
+        ImageRW.writeImage(newImg, width, height, Path.substring(0,Path.length()-1));
+        return true;
     }
 }
