@@ -1,6 +1,9 @@
+import javax.imageio.ImageIO;
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 
@@ -15,8 +18,11 @@ public class Appform {
     private JSpinner Vheight;
     private JSpinner Vwidth;
     private JSpinner Vsize;
+    private JScrollPane imagePlaceholder;
     private File CompressFile;
     private File DecompressFile;
+    private BufferedImage originalImage;
+    private BufferedImage compressedImage;
 
     public Appform() {
 
@@ -48,6 +54,15 @@ public class Appform {
                 browser.showOpenDialog(null);
                 CompressFile = browser.getSelectedFile();
                 CompressPath.setText(CompressFile.getAbsolutePath());
+                try {
+                    originalImage = ImageIO.read(new File(CompressFile.getAbsolutePath()));
+                    JLabel image = new JLabel();
+                    image.setIcon(new ImageIcon(originalImage));
+                    image.setHorizontalAlignment(JLabel.CENTER);
+                    imagePlaceholder.getViewport().add(image);
+                } catch (IOException e1) {
+                    JOptionPane.showMessageDialog(null,"Unreadable Image, please select an Image");
+                }
             }
         });
         browseButton.addActionListener(new ActionListener() {
