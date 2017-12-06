@@ -3,91 +3,7 @@ import java.util.*;
 
 public class VectorQuantization {
 
-
-    public static Vector<Integer> vectorAverage (Vector<Vector<Integer>> Vectors)
-    {
-        int[] summation = new int[Vectors.get(0).size()];
-        
-        for (Vector<Integer> vector : Vectors )
-            for (int i = 0; i < vector.size(); i++)
-                summation[i] += vector.get(i);
-
-        Vector<Integer> returnVector = new Vector<>();
-        for (int i = 0; i < summation.length; i++)
-            returnVector.add(summation[i] / Vectors.size());
-        
-        return returnVector;
-    }
-
-    public static int EuclidDistance(Vector<Integer> x, Vector<Integer> y, int incrementFactor)
-    {
-        int distance = 0;
-        for (int i = 0; i < x.size(); i++)
-            distance += Math.pow(x.get(i) - y.get(i) + incrementFactor, 2);
-        return (int) Math.sqrt(distance);
-    }
-
-    public static int EuclidDistance(Vector<Integer> x, Vector<Integer> y)
-    {
-        return EuclidDistance(x, y, 0);
-    }
-
-    public static void Quantize(int Level, Vector<Vector<Integer>> Vectors, Vector<Vector<Integer>> Quantized)
-    {
-        if(Level == 1 || Vectors.size() == 0)
-        {
-            if(Vectors.size() > 0)
-                Quantized.add(vectorAverage(Vectors));
-            return;
-        }
-        //Split
-        Vector<Vector<Integer>> leftVectors = new Vector<>();
-        Vector<Vector<Integer>> rightVectors =  new Vector<>();
-
-        //Calculate Average Vector
-        Vector<Integer> mean = vectorAverage(Vectors);
-
-        //Calculate Euclidean Distance
-        for (Vector<Integer> vec : Vectors ) {
-            int eDistance1 = EuclidDistance(vec, mean,  1);
-            int eDistance2 = EuclidDistance(vec, mean, -1);
-            //Add To Right OR Left Vector
-            if(eDistance1 >= eDistance2)
-                leftVectors.add(vec);
-            else
-                rightVectors.add(vec);
-        }
-
-        //Recurse
-        Quantize(Level / 2, leftVectors, Quantized);
-        Quantize(Level / 2, rightVectors, Quantized);
-    }
-
-    public static Vector<Integer> Optimize(Vector<Vector<Integer>> Vectors, Vector<Vector<Integer>> Quantized)
-    {
-        Vector<Integer> VectorsToQuantizedIndices = new Vector<>();
-
-        for (Vector<Integer> vector : Vectors ) {
-            int smallestDistance = EuclidDistance(vector, Quantized.get(0));
-            int smallestIndex = 0;
-
-            //Find the minimum Distance
-            for (int i = 1; i < Quantized.size(); i++) {
-                int tempDistance = EuclidDistance(vector, Quantized.get(i));
-                if(tempDistance < smallestDistance)
-                {
-                    smallestDistance = tempDistance;
-                    smallestIndex = i;
-                }
-            }
-
-            //Map the i'th Vector to the [i] in Quantized
-            VectorsToQuantizedIndices.add(smallestIndex);
-        }
-        return VectorsToQuantizedIndices;
-    }
-
-    public static boolean Compress(int vectorHeight, int vectorWidth, int codeBlockSize, String Path) throws IOException{
+    static boolean Compress(int vectorHeight, int vectorWidth, int codeBlockSize, String Path) throws IOException{
 
         //Read Image
         int[][] image = ImageRW.readImage(Path);
@@ -150,7 +66,7 @@ public class VectorQuantization {
         return true;
     }
 
-    public static boolean Decompress(String Path) throws IOException, ClassNotFoundException {
+    static boolean Decompress(String Path) throws IOException, ClassNotFoundException {
 
         InputStream file = new FileInputStream(Path);
         InputStream buffer = new BufferedInputStream(file);
@@ -190,13 +106,99 @@ public class VectorQuantization {
         return true;
     }
 
-    public static String getCompressedPath(String path)
+    private static Vector<Integer> vectorAverage(Vector<Vector<Integer>> Vectors)
+    {
+        int[] summation = new int[Vectors.get(0).size()];
+        
+        for (Vector<Integer> vector : Vectors )
+            for (int i = 0; i < vector.size(); i++)
+                summation[i] += vector.get(i);
+
+        Vector<Integer> returnVector = new Vector<>();
+        for (int i = 0; i < summation.length; i++)
+            returnVector.add(summation[i] / Vectors.size());
+        
+        return returnVector;
+    }
+
+    private static int EuclidDistance(Vector<Integer> x, Vector<Integer> y, int incrementFactor)
+    {
+        int distance = 0;
+        for (int i = 0; i < x.size(); i++)
+            distance += Math.pow(x.get(i) - y.get(i) + incrementFactor, 2);
+        return (int) Math.sqrt(distance);
+    }
+
+    private static void Quantize(int Level, Vector<Vector<Integer>> Vectors, Vector<Vector<Integer>> Quantized)
+    {
+        if(Level == 1 || Vectors.size() == 0)
+        {
+            if(Vectors.size() > 0)
+                Quantized.add(vectorAverage(Vectors));
+            return;
+        }
+        //Split
+        Vector<Vector<Integer>> leftVectors = new Vector<>();
+        Vector<Vector<Integer>> rightVectors =  new Vector<>();
+
+        //Calculate Average Vector
+        Vector<Integer> mean = vectorAverage(Vectors);
+
+        //Calculate Euclidean Distance
+        for (Vector<Integer> vec : Vectors ) {
+            int eDistance1 = EuclidDistance(vec, mean,  1);
+            int eDistance2 = EuclidDistance(vec, mean, -1);
+            //Add To Right OR Left Vector
+            if(eDistance1 >= eDistance2)
+                leftVectors.add(vec);
+            else
+                rightVectors.add(vec);
+        }
+
+        //Recurse
+        Quantize(Level / 2, leftVectors, Quantized);
+        Quantize(Level / 2, rightVectors, Quantized);
+    }
+
+    private static Vector<Integer> Optimize(Vector<Vector<Integer>> Vectors, Vector<Vector<Integer>> Quantized)
+    {
+        Vector<Integer> VectorsToQuantizedIndices = new Vector<>();
+
+        for (Vector<Integer> vector : Vectors ) {
+            int smallestDistance = EuclidDistance(vector, Quantized.get(0));
+            int smallestIndex = 0;
+
+            //Find the minimum Distance
+            for (int i = 1; i < Quantized.size(); i++) {
+                int tempDistance = EuclidDistance(vector, Quantized.get(i));
+                if(tempDistance < smallestDistance)
+                {
+                    smallestDistance = tempDistance;
+                    smallestIndex = i;
+                }
+            }
+
+            //Map the i'th Vector to the [i] in Quantized
+            VectorsToQuantizedIndices.add(smallestIndex);
+        }
+        return VectorsToQuantizedIndices;
+    }
+
+    //Helpers
+    static String getCompressedPath(String path)
     {
         return path.substring(0, path.lastIndexOf('.'))+".VQ";
     }
-    public static String getDecompressedPath(String path)    {
+    static String getDecompressedPath(String path)    {
         return path.substring(0,path.lastIndexOf('.')) + "_Compressed.jpg";
     }
+
+    //Default Value Overwriting
+    private static int EuclidDistance(Vector<Integer> x, Vector<Integer> y)
+    {
+        return EuclidDistance(x, y, 0);
+    }
+
 
 
 }
