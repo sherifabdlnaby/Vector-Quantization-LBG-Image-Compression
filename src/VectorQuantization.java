@@ -18,12 +18,17 @@ public class VectorQuantization {
         return returnVector;
     }
 
-    public static int EuclidDistance(Vector<Integer> x, Vector<Integer> y)
+    public static int EuclidDistance(Vector<Integer> x, Vector<Integer> y, int incrementFactor)
     {
         int distance = 0;
         for (int i = 0; i < x.size(); i++)
-            distance += Math.pow(x.get(i) - y.get(i), 2);
+            distance += Math.pow(x.get(i) - y.get(i) + incrementFactor, 2);
         return (int) Math.sqrt(distance);
+    }
+
+    public static int EuclidDistance(Vector<Integer> x, Vector<Integer> y)
+    {
+        return EuclidDistance(x, y, 0);
     }
 
     public static void Quantize(int Level, Vector<Vector<Integer>> Vectors, Vector<Vector<Integer>> Quantized)
@@ -37,24 +42,21 @@ public class VectorQuantization {
         //Split
         Vector<Vector<Integer>> leftVectors = new Vector<>();
         Vector<Vector<Integer>> rightVectors =  new Vector<>();
+
+        //Calculate Average Vector
         Vector<Integer> mean = vectorAverage(Vectors);
 
         //Calculate Euclidean Distance
         for (Vector<Integer> vec : Vectors ) {
-            int eDistance1 = 0;
-            int eDistance2 = 0;
-            for (int i = 0; i < vec.size(); i++) {
-                eDistance1 += Math.pow(vec.get(i)-mean.get(i), 2);
-                eDistance2 += Math.pow(vec.get(i)-mean.get(i)+1, 2);
-                eDistance1 = (int) Math.sqrt(eDistance1);
-                eDistance2 = (int) Math.sqrt(eDistance2);
-            }
+            int eDistance1 = EuclidDistance(vec, mean,  1);
+            int eDistance2 = EuclidDistance(vec, mean, -1);
             //Add To Right OR Left Vector
             if(eDistance1 >= eDistance2)
                 leftVectors.add(vec);
             else
                 rightVectors.add(vec);
         }
+
         //Recurse
         Quantize(Level / 2, leftVectors, Quantized);
         Quantize(Level / 2, rightVectors, Quantized);
@@ -62,10 +64,13 @@ public class VectorQuantization {
 
     public static Vector<Integer> Optimize(Vector<Vector<Integer>> Vectors, Vector<Vector<Integer>> Quantized)
     {
-        Vector<Integer> VectorsToOptimizeIndices = new Vector<>();
+        Vector<Integer> VectorsToQuantizedIndices = new Vector<>();
+
         for (Vector<Integer> vector : Vectors ) {
             int smallestDistance = EuclidDistance(vector, Quantized.get(0));
             int smallestIndex = 0;
+
+            //Find the minimum Distance
             for (int i = 1; i < Quantized.size(); i++) {
                 int tempDistance = EuclidDistance(vector, Quantized.get(i));
                 if(tempDistance < smallestDistance)
@@ -74,15 +79,14 @@ public class VectorQuantization {
                     smallestIndex = i;
                 }
             }
-            VectorsToOptimizeIndices.add(smallestIndex);
+
+            //Map the i'th Vector to the [i] in Quantized
+            VectorsToQuantizedIndices.add(smallestIndex);
         }
-        return VectorsToOptimizeIndices;
+        return VectorsToQuantizedIndices;
     }
 
-    public static boolean Compress(int VH, int VW, int lvl, String Path) throws IOException{
-
-        int vectorHeight = VH;
-        int vectorWidth = VW;
+    public static boolean Compress(int vectorHeight, int vectorWidth, int codeBlockSize, String Path) throws IOException{
 
         //Read Image
         int[][] image = ImageRW.readImage(Path);
@@ -122,25 +126,26 @@ public class VectorQuantization {
         Vector<Vector<Integer>> Quantized = new Vector<>();
 
         //Fill Quantized Vector (The recursive part)
-        Quantize(lvl, Vectors, Quantized);
+        Quantize(codeBlockSize, Vectors, Quantized);
 
         //Optimize
-        Vector<Integer> VectorsToOptimizeIndices = Optimize(Vectors, Quantized);
+        Vector<Integer> VectorsToQuantizedIndices = Optimize(Vectors, Quantized);
 
         //Write using Java's Object Serialization
         FileOutputStream fileOutputStream = new FileOutputStream(Path+"x");
         ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
 
-        //Write
-        objectOutputStream.writeObject(ImageRW.width);
-        objectOutputStream.writeObject(ImageRW.height);
+        //Write To Compressed File
+        objectOutputStream.writeObject(originalWidth);
+        objectOutputStream.writeObject(originalHeight);
         objectOutputStream.writeObject(scaledWidth);
         objectOutputStream.writeObject(scaledHeight);
         objectOutputStream.writeObject(vectorWidth);
         objectOutputStream.writeObject(vectorHeight);
-        objectOutputStream.writeObject(VectorsToOptimizeIndices);
+        objectOutputStream.writeObject(VectorsToQuantizedIndices);
         objectOutputStream.writeObject(Quantized);
         objectOutputStream.close();
+
         return true;
     }
 
