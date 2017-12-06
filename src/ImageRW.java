@@ -1,4 +1,3 @@
-
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -32,7 +31,7 @@ public class ImageRW {
             return null;
         }
     }
-    public static void writeImage(int[][] imagePixels, String outPath) {
+    public static void writeImage(int[][] imagePixels, int width, int height, String outPath) {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         for (int y = 0; y < height; y++) {
             int s;
