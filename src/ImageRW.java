@@ -31,7 +31,8 @@ public class ImageRW {
             return null;
         }
     }
-    public static void writeImage(int[][] imagePixels, int width, int height, String outPath) {
+
+    public static BufferedImage getBufferedImage(int[][] imagePixels, int width, int height) {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         for (int y = 0; y < height; y++) {
             int s;
@@ -43,6 +44,11 @@ public class ImageRW {
                 image.setRGB(x, y, value);
             }
         }
+        return image;
+    }
+
+    public static void writeImage(int[][] imagePixels, int width, int height, String outPath) {
+        BufferedImage image = getBufferedImage(imagePixels, width, height);
         File ImageFile = new File(outPath);
         try {
             ImageIO.write(image, "jpg", ImageFile);
@@ -50,4 +56,5 @@ public class ImageRW {
             e.printStackTrace();
         }
     }
+
 }

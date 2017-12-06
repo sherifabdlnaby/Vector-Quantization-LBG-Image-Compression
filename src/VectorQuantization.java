@@ -3,6 +3,7 @@ import java.util.*;
 
 public class VectorQuantization {
 
+
     public static Vector<Integer> vectorAverage (Vector<Vector<Integer>> Vectors)
     {
         int[] summation = new int[Vectors.get(0).size()];
@@ -132,7 +133,7 @@ public class VectorQuantization {
         Vector<Integer> VectorsToQuantizedIndices = Optimize(Vectors, Quantized);
 
         //Write using Java's Object Serialization
-        FileOutputStream fileOutputStream = new FileOutputStream(Path+"x");
+        FileOutputStream fileOutputStream = new FileOutputStream(getCompressedPath(Path));
         ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
 
         //Write To Compressed File
@@ -169,6 +170,7 @@ public class VectorQuantization {
         ////////////REWRITE
         int[][] newImg = new int[scaledHeight][scaledWidth];
 
+        //MAP
         for (int i = 0; i < VectorsToOptimizeIndices.size(); i++) {
             int x = i / (scaledWidth / vectorWidth);
             int y = i % (scaledWidth / vectorWidth);
@@ -181,7 +183,20 @@ public class VectorQuantization {
                 }
             }
         }
-        ImageRW.writeImage(newImg, width, height, Path.substring(0,Path.length()-1));
+
+        //Write image with Original Width/Height
+        ImageRW.writeImage(newImg, width, height, getDecompressedPath(Path));
+
         return true;
     }
+
+    public static String getCompressedPath(String path)
+    {
+        return path.substring(0, path.lastIndexOf('.'))+".VQ";
+    }
+    public static String getDecompressedPath(String path)    {
+        return path.substring(0,path.lastIndexOf('.')) + "_Compressed.jpg";
+    }
+
+
 }
